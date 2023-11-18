@@ -4,6 +4,8 @@ import java.util.List;
 
 import org.springframework.security.core.GrantedAuthority;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -23,6 +25,7 @@ public class Role implements GrantedAuthority {
     private Long id;
     private String name;
     @OneToMany(mappedBy = "role")
+    @JsonIgnore
     private List<User> users;
 	public Long getId() {
 		return id;

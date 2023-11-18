@@ -1,6 +1,7 @@
 package com.taskmanager.entity;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 import org.springframework.security.core.GrantedAuthority;
@@ -18,6 +19,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -33,7 +36,8 @@ public class User implements UserDetails{
 	@Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
+	private String Name;
+	private String lastName;
     @Column(unique = true)
     @NotNull
     @NotEmpty
@@ -45,7 +49,9 @@ public class User implements UserDetails{
     @NotEmpty
     @Email(regexp = ".+@.+\\..+")
     private String email;
-    
+    @Column(name = "created_date")
+    @Temporal(TemporalType.DATE)
+    private Date createdDate;
     private boolean accountNonExpired = true;
     private boolean accountNonLocked = true;
     private boolean credentialsNonExpired = true;
@@ -56,7 +62,7 @@ public class User implements UserDetails{
     @OneToMany(mappedBy = "user")
     private List<TaskList> taskLists;
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-    private VerificationToken verificationToken;
+    private Token verificationToken;
 
     private boolean verified;
 
@@ -142,4 +148,29 @@ public class User implements UserDetails{
 	public void setVerified(boolean verified) {
 		this.verified = verified;
 	}
+
+	public String getName() {
+		return Name;
+	}
+
+	public void setName(String name) {
+		Name = name;
+	}
+
+	public String getLastName() {
+		return lastName;
+	}
+
+	public void setLastName(String lastName) {
+		this.lastName = lastName;
+	}
+
+	public Date getCreatedDate() {
+		return createdDate;
+	}
+
+	public void setCreatedDate(Date createdDate) {
+		this.createdDate = createdDate;
+	}
+	
 }

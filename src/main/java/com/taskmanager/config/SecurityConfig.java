@@ -36,8 +36,9 @@ public class SecurityConfig {
     SecurityFilterChain signupFilterChail(HttpSecurity http) throws Exception {
     	http.csrf(csrf -> csrf.disable())
     	.authorizeHttpRequests(authorize -> authorize
-    			.requestMatchers("/signup").permitAll()
-    			.requestMatchers("/signup/**").permitAll()
+    			.requestMatchers("/signup", "/signup/**").permitAll()
+    			.requestMatchers("/api/token/**", "/api/token").permitAll()
+    			.requestMatchers("/user", "/user/**").hasAuthority("ROLE_USER")
     			.anyRequest().authenticated()
     			)
     	.httpBasic(Customizer.withDefaults())

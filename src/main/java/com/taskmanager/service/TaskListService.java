@@ -5,171 +5,98 @@ import org.springframework.stereotype.Service;
 
 import com.taskmanager.entity.Task;
 import com.taskmanager.entity.TaskList;
+import com.taskmanager.entity.User;
+import com.taskmanager.exception.NoTaskListsFoundException;
+import com.taskmanager.exception.TaskListAlreadyExistsException;
+import com.taskmanager.exception.TaskListNotFoundException;
+import com.taskmanager.request.TaskListRequest;
 import com.taskmanager.respository.TaskListRepository;
-import com.taskmanager.respository.TaskRepository;
-
-import jakarta.persistence.EntityNotFoundException;
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class TaskListService {
 	@Autowired
-	private TaskRepository taskRepository;
-    @Autowired
-    private TaskListRepository taskListRepository;
+	private TaskListRepository taskListRepository;
+	@Autowired
+	private UserService userService;
 
-    public List<TaskList> getAllTaskLists() {
-        return (List<TaskList>) taskListRepository.findAll();
-    }
+	public List<Task> getTasks(String listName) {
+		List<TaskList> taskLists = getAllUserTasksLists();
+		Optional<TaskList> optionalTaskList = taskLists.stream().filter(taskList -> taskList.getName().equals(listName))
+				.findFirst();
 
-    public TaskList getTaskListById(Long taskListId) {
-        return taskListRepository.findById(taskListId).orElse(null);
-    }
+		return optionalTaskList.map(TaskList::getTasks)
+				.orElseThrow(() -> new TaskListNotFoundException("Lista de tareas no encontrada para el usuario"));
+	}
 
-    public List<Task> getTasksInList(Long taskListId) {
-        TaskList taskList = taskListRepository.findById(taskListId).orElse(null);
-        if (taskList != null) {
-            return taskList.getTasks();
-        }
-        return null;
-    }
+	public TaskList createTaskList(String listName, User user) {
+		// Verificar si ya existe una lista de tareas con el mismo nombre para el
+		// usuario
+		if (taskListRepository.existsByNameAndUser(listName, user)) {
+			throw new TaskListAlreadyExistsException(
+					"Ya existe una lista de tareas con el nombre '" + listName + "' para este usuario.");
+		}
 
-    public TaskList createTaskList(TaskList taskList) {
-        // Verificar si ya existe una lista de tareas con el mismo nombre
-        TaskList existingTaskList = taskListRepository.findByName(taskList.getName());
-        
-        if (existingTaskList != null) {
-            // Una lista con el mismo nombre ya existe, no la crees nuevamente
-            return existingTaskList;
-        } else {
-            // La lista de tareas no existe, así que la creamos
-            return taskListRepository.save(taskList);
-        }
-    }
+		TaskList taskList = new TaskList();
+		taskList.setName(listName);
+		taskList.setUser(user);
 
-    public TaskList updateTaskList(TaskList taskList) {
-        return taskListRepository.save(taskList);
-    }
+		// Guardar la nueva lista de tareas
+		return taskListRepository.save(taskList);
+	}
 
-    public void deleteTaskList(Long taskListId) {
-        taskListRepository.deleteById(taskListId);
-    }
+	public void deleteTaskListByNameAndUser(String listName, User user) {
+		TaskList tasklist = taskListRepository.findByNameAndUser(listName, user);
+		if (tasklist == null) {
+			throw new TaskListNotFoundException(
+					"No existe una lista de tareas con el nombre '" + listName + "' para este usuario.");
+		}
+		taskListRepository.delete(tasklist);
+	}
 
-    public Task createTaskInList(Long taskListId, Task task) {
-        TaskList taskList = taskListRepository.findById(taskListId).orElse(null);
-        if (taskList != null) {
-            // Verificar si una tarea similar ya existe en la lista
-            List<Task> tasks = taskList.getTasks();
-            for (Task existingTask : tasks) {
-                if (existingTask.getName().equals(task.getName()) && existingTask.getDescription().equals(task.getDescription())) {
-                    // La tarea ya existe, no la crees nuevamente
-                    return existingTask;
-                }
-            }
-            
-            // La tarea no existe, así que la asociamos y la creamos
-            task.setTaskList(taskList);
-            return taskRepository.save(task);
-        }
-        return null;
-    }
-    public void deleteTaskInList(Long taskListId, Long taskId) {
-        Optional<TaskList> taskListOptional = taskListRepository.findById(taskListId);
-        if (taskListOptional.isPresent()) {
-            TaskList taskList = taskListOptional.get();
-            
-            // Obtiene la tarea a eliminar
-            Optional<Task> taskToRemove = taskList.getTasks().stream()
-                .filter(task -> task.getId().equals(taskId))
-                .findFirst();
-            
-            if (taskToRemove.isPresent()) {
-                Task task = taskToRemove.get();
-                
-                // Actualiza la relación bidireccional
-                task.setTaskList(null); // Limpia la referencia en la entidad Task
-                
-                // Remueve la tarea de la lista
-                taskList.getTasks().remove(task);
-                
-                // Guarda los cambios
-                taskRepository.delete(task); // O elimina la tarea desde el repositorio de tareas
-                taskListRepository.save(taskList);
-            } else {
-                // Manejo si la tarea no se encontró en la lista de tareas.
-            }
-        } else {
-            // Manejo si la lista de tareas no se encontró.
-        }
-    }
+	public TaskList updateTaskListNameForUser(User user, String oldName, String newName) {
+		TaskList taskList = taskListRepository.findByNameAndUser(oldName, user);
 
-    public List<Task> searchTasksInList(Long taskListId, String keyword) {
-        TaskList taskList = taskListRepository.findById(taskListId).orElse(null);
+		if (taskList == null) {
+			throw new TaskListNotFoundException(
+					"No se encontró la lista de tareas con el nombre proporcionado para el usuario.");
+		}
 
-        if (taskList != null) {
-            List<Task> tasks = taskList.getTasks();
-            List<Task> matchingTasks = new ArrayList<>();
+		taskList.setName(newName);
+		return taskListRepository.save(taskList);
+	}
 
-            // Realiza la búsqueda y filtrado por nombre de tarea
-            for (Task task : tasks) {
-                if (task.getName().toLowerCase().contains(keyword.toLowerCase())) {
-                    matchingTasks.add(task);
-                }
-            }
+	public List<TaskList> searchTaskList(String name) {
+		List<TaskList> taskLists = taskListRepository.findByNameContaining(name, userService.getUser());
+		if (taskLists.isEmpty()) {
+			throw new TaskListNotFoundException("No se encontró una lista de tareas con el nombre: " + name);
+		}
+		return taskLists;
+	}
 
-            return matchingTasks;
-        } else {
-            // Manejo si la lista de tareas no se encuentra
-            throw new EntityNotFoundException("La lista de tareas no se encontró");
-        }
-    }
-    public Task markTaskAsCompleted(Long taskListId, Long taskId) {
-        TaskList taskList = taskListRepository.findById(taskListId).orElse(null);
+	public TaskList createTaskList(TaskListRequest taskList) {
+		User user = userService.getUser();
+		TaskList tasklist = createTaskList(taskList.getListName(), user);
+		return tasklist;
 
-        if (taskList != null) {
-            List<Task> tasks = taskList.getTasks();
+	}
 
-            for (Task task : tasks) {
-                if (task.getId().equals(taskId)) {
-                    task.setCompleted(!task.isCompleted()); // Invierte el estado de completado
-                    taskRepository.save(task); // Guarda el cambio en la base de datos
-                    return task;
-                }
-            }
+	public List<TaskList> getAllUserTasksLists() {
+		User user = userService.getUser();
+		List<TaskList> taskLists = user.getTaskLists();
+		if (taskLists == null || taskLists.isEmpty()) {
+			throw new NoTaskListsFoundException(user.getUsername());
+		}
+		return taskLists;
+	}
 
-            // Manejo si la tarea no se encuentra en la lista de tareas.
-            throw new EntityNotFoundException("La tarea no se encontró en la lista de tareas.");
-        } else {
-            // Manejo si la lista de tareas no se encuentra.
-            throw new EntityNotFoundException("La lista de tareas no se encontró.");
-        }
-    }
+	public TaskList updateTaskListName(String oldName, String newName) {
+		return updateTaskListNameForUser(userService.getUser(), oldName, newName);
+	}
 
-    public List<Task> sortTasksInList(Long taskListId, String orderBy, String direction) {
-        TaskList taskList = taskListRepository.findById(taskListId).orElse(null);
-
-        if (taskList != null) {
-            List<Task> tasks = taskList.getTasks();
-
-            // Implementa la lógica de ordenación por fecha de vencimiento
-            tasks.sort((task1, task2) -> {
-                int result;
-                if ("dueDate".equals(orderBy)) {
-                    result = task1.getDueDate().compareTo(task2.getDueDate());
-                } else {
-                    // Ordenar por defecto por ID
-                    result = task1.getId().compareTo(task2.getId());
-                }
-                return "asc".equals(direction) ? result : -result;
-            });
-
-            return tasks;
-        } else {
-            // Manejo si la lista de tareas no se encuentra.
-            throw new EntityNotFoundException("La lista de tareas no se encontró.");
-        }
-    }
+	public void deleteTaskList(String taskList) {
+		User user = userService.getUser();
+		deleteTaskListByNameAndUser(taskList, user);
+	}
 }

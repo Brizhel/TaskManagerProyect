@@ -3,8 +3,11 @@ package com.taskmanager.entity;
 import java.util.List;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import io.micrometer.common.lang.NonNull;
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -24,11 +27,12 @@ public class TaskList {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @NonNull
+    @Column(nullable = false)
     @Size(min = 5, max = 50)
     private String name;
-
     @OneToMany(mappedBy = "taskList", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Task> tasks;
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "user_id") // Nombre de la columna que almacena la clave foránea en la tabla task_lists
     private User user;
@@ -57,6 +61,14 @@ public class TaskList {
 		this.tasks = tasks;
 	}
     
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 	    if (this == o) return true;

@@ -12,7 +12,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 
 @Entity
-public class VerificationToken {
+public class Token {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,12 +31,12 @@ public class VerificationToken {
     private boolean isUsed;
 
     public enum TokenType {
-        REGISTRATION, PASSWORD_RESET // Puedes agregar más tipos según tus necesidades
+        REGISTRATION, PASSWORD_RESET, DELETION // Puedes agregar más tipos según tus necesidades
     }
 
     // Constructor, getters y setters
 
-    public VerificationToken() {
+    public Token() {
         this.token = generateToken();
         this.expiryDate = calculateExpiryDate();
         this.isUsed = false;
@@ -99,5 +99,8 @@ public class VerificationToken {
 	public void setUsed(boolean isUsed) {
 		this.isUsed = isUsed;
 	}
+    public boolean isExpired() {
+        return LocalDateTime.now().isAfter(expiryDate);
+    }
 }
 

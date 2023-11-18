@@ -1,6 +1,8 @@
 package com.taskmanager.entity;
 
 
+import java.time.LocalDate;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import io.micrometer.common.lang.NonNull;
@@ -24,7 +26,7 @@ public class Task {
     private String name;
     @NotEmpty
     private String description;
-    private String dueDate;
+    private LocalDate dueDate;
     private boolean completed;
     @JsonIgnore // Evita que se serialice el campo taskList
     @ManyToOne
@@ -55,11 +57,11 @@ public class Task {
 		this.description = description;
 	}
 
-	public String getDueDate() {
+	public LocalDate getDueDate() {
 		return dueDate;
 	}
 
-	public void setDueDate(String dueDate) {
+	public void setDueDate(LocalDate dueDate) {
 		this.dueDate = dueDate;
 	}
 
