@@ -11,5 +11,5 @@ public interface TaskListRepository extends JpaRepository<TaskList, Long> {
     TaskList findByName(String name);
     boolean existsByNameAndUser(String name, User user);
     TaskList findByNameAndUser(String name, User user);
-    List<TaskList> findByNameContaining(String name, User user);
+    List<TaskList> findByNameContainingAndUser(String name, User user);
 }

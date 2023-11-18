@@ -10,6 +10,6 @@ import com.taskmanager.entity.TaskList;
 public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByTaskList(TaskList taskList);
     Task findByNameAndTaskList(String name, TaskList taskList);
-    List<Task> findByNameContaining(String keyword, TaskList taskList);
-    List<Task> findByNameContainingAndCompleted(String name, boolean completed, TaskList taskList);
+    List<Task> findByNameContainingAndTaskList(String keyword, TaskList taskList);
+    List<Task> findByNameContainingAndCompletedAndTaskList(String name, boolean completed, TaskList taskList);
 }

@@ -68,7 +68,7 @@ public class TaskListService {
 	}
 
 	public List<TaskList> searchTaskList(String name) {
-		List<TaskList> taskLists = taskListRepository.findByNameContaining(name, userService.getUser());
+		List<TaskList> taskLists = taskListRepository.findByNameContainingAndUser(name, userService.getUser());
 		if (taskLists.isEmpty()) {
 			throw new TaskListNotFoundException("No se encontró una lista de tareas con el nombre: " + name);
 		}

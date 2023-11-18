@@ -88,7 +88,7 @@ public class TaskService {
 	}
 	public List<Task> searchTaskContainName(String keyword, String taskListName) {
 		TaskList tasklist = getListTaskByNameAndUser(taskListName);
-		List<Task> tasks = taskRepository.findByNameContaining(keyword, tasklist);
+		List<Task> tasks = taskRepository.findByNameContainingAndTaskList(keyword, tasklist);
 		if (tasks.isEmpty()) {
 			throw new TaskNotFoundException("No se encontraron tareas con la palabra clave: " + keyword);
 		}
@@ -96,6 +96,6 @@ public class TaskService {
 	}
 	public List<Task> searchTaskByKeywordAndCompleted(String keyword,boolean completed, String taskListName){
 			TaskList tasklist = getListTaskByNameAndUser(taskListName);
-			return taskRepository.findByNameContainingAndCompleted(keyword, completed, tasklist);
+			return taskRepository.findByNameContainingAndCompletedAndTaskList(keyword, completed, tasklist);
 	}
 }
