@@ -1,29 +1,28 @@
 package com.taskmanager.service;
 
 import java.util.Date;
+import java.util.HashSet;
+
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import com.taskmanager.config.AppConfig;
 import com.taskmanager.entity.Role;
 import com.taskmanager.entity.User;
+import com.taskmanager.entity.User.UserType;
 import com.taskmanager.entity.Token;
-import com.taskmanager.exception.EmailInUseException;
-import com.taskmanager.exception.InvalidPasswordException;
-import com.taskmanager.exception.InvalidLastNameException;
-import com.taskmanager.exception.InvalidNameException;
-import com.taskmanager.exception.PasswordMismatchException;
-import com.taskmanager.exception.PasswordNotChangedException;
 import com.taskmanager.exception.TokenExpiredException;
 import com.taskmanager.exception.TokenNotFoundException;
 import com.taskmanager.exception.UserNotFoundException;
-import com.taskmanager.exception.UsernameTakenException;
 import com.taskmanager.request.ChangePasswordRequest;
+import com.taskmanager.request.CreateUserRequest;
 import com.taskmanager.request.UserUpdateRequest;
 import com.taskmanager.respository.RoleRepository;
 import com.taskmanager.respository.UserRepository;
+import com.taskmanager.util.PasswordUtil;
+import com.taskmanager.util.UserUtil;
+
 import jakarta.transaction.Transactional;
 
 @Transactional
@@ -37,38 +36,25 @@ public class UserService {
 	private TokenService tokenService;
 	@Autowired
 	private EmailService emailService;
+	@Autowired
+	private ModelMapper modelMapper;
+	@Autowired
+	private UserUtil userUtil;
+	@Autowired
+	private PasswordUtil passwordUtil;
+	public User registerNewUser(CreateUserRequest createUserRequest) {
+		User newUser = modelMapper.map(createUserRequest, User.class);
+	    userUtil.validateUserRegistration(newUser.getUsername(), newUser.getEmail(), newUser.getPassword());
 
-	public User registerNewUser(User newUser) {
-		// Realiza las validaciones necesarias antes de registrar al nuevo usuario
-		if (isUsernameTaken(newUser.getUsername())) {
-			throw new UsernameTakenException("El nombre de usuario ya está en uso.");
-		}
-		if (newUser.getName() == null || newUser.getName().trim().isEmpty()) {
-			throw new InvalidNameException("El nombre no puede estar vacío o contener espacios");
-		}
-		if (newUser.getLastName() == null || newUser.getLastName().trim().isEmpty()) {
-			throw new InvalidLastNameException("El Apellido no puede estar vacío o contener espacios");
-		}
 		newUser.setCreatedDate(new Date());
-		String password = newUser.getPassword();
-
-		// Verifica que la contraseña no sea nula o en blanco
-		if (password == null || password.trim().isEmpty()) {
-			throw new InvalidPasswordException("La contraseña no es válida.");
-		}
-
-		if (isEmailAlreadyInUse(newUser.getEmail())) {
-			throw new EmailInUseException(
-					"Hay una cuenta con esa dirección de correo electrónico: " + newUser.getEmail());
-		}
-
-		// Codifica y establece la contraseña
-		String encodedPassword = AppConfig.passwordEncoder().encode(password);
+        newUser.setUserType(UserType.USER);
+		String encodedPassword = passwordUtil.encryptPassword(newUser.getPassword());
 		newUser.setPassword(encodedPassword);
-
-		// Asigna el rol por defecto (ROLE_USER)
+		if (newUser.getRoles() == null) {
+		    newUser.setRoles(new HashSet<>());
+		}
 		Role userRole = roleRepository.findByName("ROLE_USER");
-		newUser.setRole(userRole);
+	    newUser.getRoles().add(userRole);
 
 		// Guarda el nuevo usuario en el repositorio
 		newUser = userRepository.save(newUser);
@@ -86,11 +72,9 @@ public class UserService {
 	}
 
 	public void ChangePassword(ChangePasswordRequest request) {
-		User user = getUser();
-		if (!AppConfig.passwordEncoder().matches(request.getOldPassword(), user.getPassword())) {
-			throw new PasswordMismatchException("La antigua contraseña no es válida");
-		}
-		String encodedNewPassword = AppConfig.passwordEncoder().encode(request.getNewPassword());
+		User user = userUtil.getUser();
+		passwordUtil.validateOldPassword(request.getOldPassword(), user);
+		String encodedNewPassword = passwordUtil.encryptPassword(request.getNewPassword());
 		user.setPassword(encodedNewPassword);
 		userRepository.save(user);
 		String subject = "Cambio de Contraseña Exitoso";
@@ -101,17 +85,16 @@ public class UserService {
 	}
 
 	public User updateCurrentUser(UserUpdateRequest userUpdateRequest) {
-		User currentUser = getUser();
-		currentUser.setName(userUpdateRequest.getName());
-		currentUser.setLastName(userUpdateRequest.getLastName());
+		User currentUser = userUtil.getUser();
+        modelMapper.map(userUpdateRequest, currentUser);
 		return userRepository.save(currentUser);
 	}
 
 	public void deleteUser(String token) {
 		if (tokenService.isValidToken(token)) {
 			Token deleteToken = tokenService.findByToken(token);
-			if (deleteToken.getUser().getUsername() == getUser().getUsername()) {
-				User user = getUser();
+			if (deleteToken.getUser().getUsername() == userUtil.getUser().getUsername()) {
+				User user = userUtil.getUser();
 				userRepository.delete(user);
 				SecurityContextHolder.clearContext();
 				tokenService.markTokenAsUsed(deleteToken);
@@ -123,7 +106,7 @@ public class UserService {
 
 	public void initiateUserDeletion() {
 
-		User userToDelete = getUser();
+		User userToDelete = userUtil.getUser();
 
 		// Realiza cualquier validación adicional, si es necesario
 
@@ -172,32 +155,11 @@ public class UserService {
 			throw new TokenExpiredException("El token ha expirado");
 		}
 		User user = resetToken.getUser();
-		if (AppConfig.passwordEncoder().matches(newPassword, user.getPassword())) {
-			throw new PasswordNotChangedException("La nueva contraseña debe ser diferente de la contraseña actual");
-		}
-		String encodedPassword = AppConfig.passwordEncoder().encode(newPassword);
+		passwordUtil.validateNewPassword(newPassword, user);
+		String encodedPassword = passwordUtil.encryptPassword(newPassword);
 		user.setPassword(encodedPassword);
 		userRepository.save(user);
 		tokenService.markTokenAsUsed(resetToken);
 	}
 
-	public User getUser() {
-		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		User user = userRepository.findByUsername(authentication.getName());
-		return user;
-	}
-
-	public boolean isUsernameTaken(String username) {
-		User existingUser = userRepository.findByUsername(username);
-		return existingUser != null;
-	}
-
-	public boolean isEmailAlreadyInUse(String email) {
-		User existingUser = userRepository.findByEmail(email);
-		return existingUser != null;
-	}
-
-	public boolean isPasswordValid(User user, String password) {
-		return AppConfig.passwordEncoder().matches(password, user.getPassword());
-	}
 }

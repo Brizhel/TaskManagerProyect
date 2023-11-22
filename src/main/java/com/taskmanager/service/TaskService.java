@@ -1,5 +1,6 @@
 package com.taskmanager.service;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -10,18 +11,21 @@ import com.taskmanager.exception.TaskNotFoundException;
 import com.taskmanager.request.TaskRequest;
 import com.taskmanager.respository.TaskListRepository;
 import com.taskmanager.respository.TaskRepository;
+import com.taskmanager.util.UserUtil;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @Service
 public class TaskService {
+	@Autowired
+	private UserUtil userUtil;
+	@Autowired
+	private ModelMapper modelMapper;
     @Autowired
     private TaskRepository taskRepository;
     @Autowired
     private TaskListRepository taskListRepository;
-    @Autowired
-    private UserService userService;
     public Task getTask(String taskName, String taskList) {
     	Task task = taskRepository.findByNameAndTaskList(taskName, getListTaskByNameAndUser(taskList));
     	if (task == null) {
@@ -34,11 +38,7 @@ public class TaskService {
     	if (taskTry != null) {
     		throw new TaskAlreadyExistException("La tarea ya existe");
     	}
-    	Task task = new Task();
-    	task.setName(request.getName());
-    	task.setDescription(request.getDescription());
-    	task.setDueDate(request.getDueDate());
-    	task.setTaskList(getListTaskByNameAndUser(taskListName));
+    	Task task = modelMapper.map(request, Task.class);
     	return taskRepository.save(task);
     }
     public void deleteTask(String taskName, String taskList) {
@@ -68,7 +68,7 @@ public class TaskService {
     	task.setCompleted(completed);
     }
     public TaskList getListTaskByNameAndUser(String TaskListName) {
-    	TaskList taskList = taskListRepository.findByNameAndUser(TaskListName, userService.getUser());
+    	TaskList taskList = taskListRepository.findByNameAndUser(TaskListName, userUtil.getUser());
     	return taskList;
     }
 	public Task updateTask(String listName, String taskName, TaskRequest taskRequest) {

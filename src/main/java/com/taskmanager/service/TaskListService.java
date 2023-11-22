@@ -11,6 +11,8 @@ import com.taskmanager.exception.TaskListAlreadyExistsException;
 import com.taskmanager.exception.TaskListNotFoundException;
 import com.taskmanager.request.TaskListRequest;
 import com.taskmanager.respository.TaskListRepository;
+import com.taskmanager.util.UserUtil;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -19,7 +21,8 @@ public class TaskListService {
 	@Autowired
 	private TaskListRepository taskListRepository;
 	@Autowired
-	private UserService userService;
+	private UserUtil userUtil;
+
 
 	public List<Task> getTasks(String listName) {
 		List<TaskList> taskLists = getAllUserTasksLists();
@@ -68,7 +71,7 @@ public class TaskListService {
 	}
 
 	public List<TaskList> searchTaskList(String name) {
-		List<TaskList> taskLists = taskListRepository.findByNameContainingAndUser(name, userService.getUser());
+		List<TaskList> taskLists = taskListRepository.findByNameContainingAndUser(name, userUtil.getUser());
 		if (taskLists.isEmpty()) {
 			throw new TaskListNotFoundException("No se encontró una lista de tareas con el nombre: " + name);
 		}
@@ -76,14 +79,14 @@ public class TaskListService {
 	}
 
 	public TaskList createTaskList(TaskListRequest taskList) {
-		User user = userService.getUser();
+		User user = userUtil.getUser();
 		TaskList tasklist = createTaskList(taskList.getListName(), user);
 		return tasklist;
 
 	}
 
 	public List<TaskList> getAllUserTasksLists() {
-		User user = userService.getUser();
+		User user = userUtil.getUser();
 		List<TaskList> taskLists = user.getTaskLists();
 		if (taskLists == null || taskLists.isEmpty()) {
 			throw new NoTaskListsFoundException(user.getUsername());
@@ -92,11 +95,11 @@ public class TaskListService {
 	}
 
 	public TaskList updateTaskListName(String oldName, String newName) {
-		return updateTaskListNameForUser(userService.getUser(), oldName, newName);
+		return updateTaskListNameForUser(userUtil.getUser(), oldName, newName);
 	}
 
 	public void deleteTaskList(String taskList) {
-		User user = userService.getUser();
+		User user = userUtil.getUser();
 		deleteTaskListByNameAndUser(taskList, user);
 	}
 }

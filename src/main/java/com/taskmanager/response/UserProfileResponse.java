@@ -2,6 +2,8 @@ package com.taskmanager.response;
 
 import java.util.Date;
 
+import com.taskmanager.entity.User.UserType;
+
 public class UserProfileResponse {
 
     private String username;
@@ -9,6 +11,7 @@ public class UserProfileResponse {
     private String lastName;
     private String email;
     private Date createdDate;
+    private UserType userType; // Agrega el campo UserType
     public UserProfileResponse(String username, String name, String lastName, String email, Date createdDate) {
         this.username = username;
         this.name = name;
@@ -16,8 +19,8 @@ public class UserProfileResponse {
         this.email = email;
         this.createdDate = createdDate;
     }
-
-
+    public UserProfileResponse() {
+    }
 	public String getUsername() {
 		return username;
 	}
@@ -58,6 +61,16 @@ public class UserProfileResponse {
 
 	public void setCreatedDate(Date createdDate) {
 		this.createdDate = createdDate;
+	}
+
+
+	public UserType getUserType() {
+		return userType;
+	}
+
+
+	public void setUserType(UserType userType) {
+		this.userType = userType;
 	}
     
 }

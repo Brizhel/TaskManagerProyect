@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <!-- Agrega los enlaces a Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-mQwzZMLBAAK8NO76f+qGZLXP9pOxhHv3L2qTc5SLqSmhP4JHbCt8D1R6MRQNWpxl" crossorigin="anonymous">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>User Profile</h1>
+        <div id="profile-container">
+            <!-- Aquí se mostrará el perfil del usuario -->
+        </div>
+        <button class="btn btn-danger" id="logout-btn">Logout</button>
+    </div>
+
+    <!-- Agrega los enlaces a Bootstrap y Popper.js (necesario para algunos componentes de Bootstrap) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-oRABiD5gaA9xu0IAo7Rq4I6bsWmOG5iTywFxVJQ4Me9ISh3bVm6c6UwsMNxObQV/6" crossorigin="anonymous"></script>
+    
+    <!-- Agrega el script para consumir el controlador de usuario y manejar el logout -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Llama a la función para obtener el perfil del usuario cuando se carga la página
+            getUserProfile();
+
+            // Agrega un event listener al botón de logout
+            document.getElementById('logout-btn').addEventListener('click', function () {
+                // Realiza el logout al hacer clic en el botón
+                logout();
+            });
+        });
+
+        // Función para obtener el perfil del usuario
+        function getUserProfile() {
+            // Obtiene el token del localStorage
+            const token = localStorage.getItem('token');
+
+            // Verifica si el token está presente
+            if (!token) {
+                // Redirige a la página de login si no hay token
+                window.location.href = '/auth/login.html';
+                return;
+            }
+
+            // Realiza una solicitud GET al endpoint de perfil de usuario
+            fetch('/user/profile', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,  // Incluye el token JWT en el encabezado
+                    'Content-Type': 'application/json',
+                    // Agrega cualquier encabezado adicional necesario
+                },
+            })
+                .then(response => response.json())
+                .then(data => {
+                    // Muestra la información del perfil del usuario en el contenedor
+                    document.getElementById('profile-container').innerHTML = `
+                        <p><strong>Username:</strong> ${data.username}</p>
+                        <p><strong>Email:</strong> ${data.email}</p>
+                        <!-- Agrega más campos según sea necesario -->
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error fetching user profile:', error);
+                    // Redirige a la página de login en caso de error
+                    window.location.href = '/auth/login.html';
+                });
+        }
+
+        // Función para realizar el logout
+        function logout() {
+            // Limpia el token del localStorage
+            localStorage.removeItem('token');
+
+            // Redirige a la página de login después de logout
+            window.location.href = '/auth/login.html';
+        }
+    </script>
+</body>
+</html>

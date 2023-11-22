@@ -1,16 +1,18 @@
 package com.taskmanager.entity;
 
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.springframework.security.core.GrantedAuthority;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 
 @Entity
@@ -23,10 +25,11 @@ public class Role implements GrantedAuthority {
 	@Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+	@Column(unique = true)
     private String name;
-    @OneToMany(mappedBy = "role")
+    @ManyToMany(mappedBy = "roles")
     @JsonIgnore
-    private List<User> users;
+    private Set<User> users = new HashSet<>();
 	public Long getId() {
 		return id;
 	}

@@ -1,7 +1,9 @@
 package com.taskmanager.controller;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +23,7 @@ import com.taskmanager.exception.TaskListNotFoundException;
 import com.taskmanager.exception.TaskNotFoundException;
 import com.taskmanager.exception.UserNotFoundException;
 import com.taskmanager.request.TaskRequest;
+import com.taskmanager.response.TaskResponse;
 import com.taskmanager.service.TaskListService;
 import com.taskmanager.service.TaskService;
 
@@ -29,22 +32,25 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/user/task-lists/{listName}/tasks")
 public class TaskController {
-	
+	@Autowired
+	private ModelMapper modelMapper;
 	@Autowired
 	private TaskListService taskListService;
 	@Autowired
 	private TaskService taskService;
     
-    @GetMapping
-    public ResponseEntity<?> getTasks(
-    		@PathVariable String listName) {
-        try {
-            List<Task> tasks = taskListService.getTasks(listName);
-            return ResponseEntity.ok(tasks);
-        } catch (TaskListNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Lista de tareas inválida");
-        }
-    }
+	@GetMapping
+	public ResponseEntity<?> getTasks(@PathVariable String listName) {
+	    try {
+	        List<TaskResponse> taskResponses = taskListService.getTasks(listName).stream()
+	                .map(task -> modelMapper.map(task, TaskResponse.class))
+	                .collect(Collectors.toList());
+
+	        return ResponseEntity.ok(taskResponses);
+	    } catch (TaskListNotFoundException e) {
+	        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Lista de tareas inválida");
+	    }
+	}
 	@PostMapping
 	public ResponseEntity<?> createTask(
 			@PathVariable String listName ,
@@ -107,15 +113,19 @@ public class TaskController {
         }
     }
     @GetMapping("/search")
-    public ResponseEntity<?> searchTaskB(
-    		@PathVariable String listName, 
-    		@RequestParam(required = false) String keyword, 
-    		@RequestParam(required = false) boolean completion){
-    	try {
-    		List<Task> tasks = taskService.searchTaskByKeywordAndCompleted(keyword, completion, listName);
-    		return new ResponseEntity<>(tasks, HttpStatus.OK);
-    	} catch (TaskNotFoundException e) {
-    		return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-    	}
+    public ResponseEntity<?> searchTask(
+            @PathVariable String listName,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) boolean completion) {
+        try {
+            List<TaskResponse> taskResponses = taskService.searchTaskByKeywordAndCompleted(keyword, completion, listName)
+                    .stream()
+                    .map(task -> modelMapper.map(task, TaskResponse.class))
+                    .collect(Collectors.toList());
+
+            return new ResponseEntity<>(taskResponses, HttpStatus.OK);
+        } catch (TaskNotFoundException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 }

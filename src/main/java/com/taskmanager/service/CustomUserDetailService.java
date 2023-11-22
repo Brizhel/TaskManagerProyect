@@ -31,7 +31,7 @@ public class CustomUserDetailService implements UserDetailsService{
             throw new DisabledException("La cuenta está desactivada");
         }
         return new org.springframework.security.core.userdetails.User(
-            user.getUsername(), user.getPassword(), user.getAuthorities()
+            user.getUsername(), user.getPassword(), user.getRoles()
         );
 	}
 }
